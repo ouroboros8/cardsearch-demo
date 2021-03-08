@@ -1,17 +1,19 @@
 import './App.css';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import elasticlunr from 'elasticlunr';
+import debounce from 'debounce';
 
 function Card({score, cardData}) {
   return <div>
-    <p>{score}: {cardData.title}</p>
-    <p>{cardData.text}</p>
+    <p>{cardData.title}</p>
+    <p style={{fontSize: "0.6em"}}>{cardData.text}</p>
   </div>
 }
 
 function Results({search}) {
   // TODO debounce index search
   const [index, setIndex] = useState(null)
+  const [debouncedSearch, setDebouncedSearch] = useState(search)
 
   useEffect(() => {
     const loadData = async () => {
@@ -32,19 +34,27 @@ function Results({search}) {
     loadData()
   }, [])
 
-   const results = index ? index.search(search, {
-       fields: {
-         text: {
-           boost: 2,
-           expand: true,
-         },
-         title: {
-           boost: 1,
-           expand: true,
-         },
-         bool: 'AND',
-       }
-   }) : []
+  const searchDebounce = useCallback(
+    debounce((val) => {
+      console.log("updating search to", val)
+      setDebouncedSearch(val)
+    }, 200), []
+  )
+  useEffect(() => searchDebounce(search), [search])
+
+  const results = index ? index.search(debouncedSearch, {
+    fields: {
+      text: {
+        boost: 2,
+        expand: true,
+      },
+      title: {
+        boost: 1,
+        expand: true,
+      },
+      bool: 'AND',
+    }
+  }) : []
 
   return results.map((result) => {
     const score = Math.round(result.score * 100) / 100
