@@ -26,8 +26,12 @@ function Results({search}) {
     const loadData = async () => {
       const res = await fetch('https://netrunnerdb.com/api/2.0/public/cards')
       const json = await res.json()
+      const uniqueCards = json.data.reduce((cards, thisCard) => {
+        const seen = cards.map((card) => card.title)
+        return seen.includes(thisCard.title) ? cards : cards.concat(thisCard)
+      }, [])
 
-      const fuse = new Fuse(json.data, options)
+      const fuse = new Fuse(uniqueCards, options)
       setFuse(fuse)
       console.log('Got cards')
     }
@@ -42,7 +46,7 @@ function Results({search}) {
   )
   useEffect(() => debouncedSearch(search), [search])
 
-  return results.map((result) => {
+  return results.slice(0, 5).map((result) => {
     const score = Math.round(result.score * 100) / 100
     return <Card key={result.item.code} score={score} cardData={result.item}/>
   })
