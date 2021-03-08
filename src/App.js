@@ -12,7 +12,7 @@ function Card({score, cardData}) {
 
 function Results({search}) {
   const [fuse, setFuse] = useState(null)
-  const [debouncedSearch, setDebouncedSearch] = useState(search)
+  const [results, setResults] = useState([])
 
   const options = {
     includeScore: true,
@@ -34,17 +34,13 @@ function Results({search}) {
     loadData()
   }, [])
 
-  const searchDebounce = useCallback(
+  const debouncedSearch = useCallback(
     debounce((val) => {
-      console.log("Updating fuse search to", val)
-      setDebouncedSearch(val)
-    }, 200), []
+      console.log(`Updating fuse results for "${val}"`)
+      setResults(fuse ? fuse.search(val) : [])
+    }, 200), [fuse]
   )
-  useEffect(() => searchDebounce(search), [search])
-
-  const results = useMemo(() => {
-    return fuse ? fuse.search(debouncedSearch) : []
-  }, [debouncedSearch])
+  useEffect(() => debouncedSearch(search), [search])
 
   return results.map((result) => {
     const score = Math.round(result.score * 100) / 100
