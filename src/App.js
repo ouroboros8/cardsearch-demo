@@ -1,34 +1,34 @@
 import './App.css';
-import React, { useState, useEffect, useCallback } from 'react';
-import elasticlunr from 'elasticlunr';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import Fuse from 'fuse.js';
 import debounce from 'debounce';
 
 function Card({score, cardData}) {
   return <div>
-    <p>{cardData.title}</p>
-    <p style={{fontSize: "0.6em"}}>{cardData.text}</p>
+    <p>{cardData.title} ({score})</p>
+    <p style={{fontSize: "0.7em"}}>{cardData.text}</p>
   </div>
 }
 
 function Results({search}) {
-  // TODO debounce index search
-  const [index, setIndex] = useState(null)
+  const [fuse, setFuse] = useState(null)
   const [debouncedSearch, setDebouncedSearch] = useState(search)
+
+  const options = {
+    includeScore: true,
+    keys: [
+      "title",
+      "text",
+    ],
+  }
 
   useEffect(() => {
     const loadData = async () => {
       const res = await fetch('https://netrunnerdb.com/api/2.0/public/cards')
       const json = await res.json()
 
-      const index = elasticlunr(function () {
-        this.addField("title")
-        this.addField("text")
-        this.setRef("code")
-      })
-      json.data.forEach((card) => {
-        index.addDoc(card)
-      })
-      setIndex(index)
+      const fuse = new Fuse(json.data, options)
+      setFuse(fuse)
       console.log('Got cards')
     }
     loadData()
@@ -36,30 +36,31 @@ function Results({search}) {
 
   const searchDebounce = useCallback(
     debounce((val) => {
-      console.log("updating search to", val)
+      console.log("Updating fuse search to", val)
       setDebouncedSearch(val)
     }, 200), []
   )
   useEffect(() => searchDebounce(search), [search])
 
-  const results = index ? index.search(debouncedSearch, {
-    fields: {
-      text: {
-        boost: 2,
-        expand: true,
-      },
-      title: {
-        boost: 1,
-        expand: true,
-      },
-      bool: 'AND',
-    }
-  }) : []
+  const results = useMemo(() => {
+    return fuse ? fuse.search(debouncedSearch, {
+      fields: {
+        text: {
+          boost: 2,
+          expand: true,
+        },
+        title: {
+          boost: 1,
+          expand: true,
+        },
+        bool: 'AND',
+      }
+    }) : []
+  }, [debouncedSearch])
 
   return results.map((result) => {
     const score = Math.round(result.score * 100) / 100
-    const cardData = index.documentStore.getDoc(result.ref)
-    return <Card key={cardData.code} score={score} cardData={cardData}/>
+    return <Card key={result.item.code} score={score} cardData={result.item}/>
   })
 }
 
@@ -72,13 +73,17 @@ function App() {
   }
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <form onSubmit={(event) => event.preventDefault()}>
-          <input type="text" value={search} onChange={handleChange}/>
-        </form>
+    <div className="App" style={{
+      display: "grid",
+      gridTemplateColumns: "100%",
+      gridTemplateAreas: "'searchbar' 'results'"
+    }}>
+      <form style={{gridArea: "searchbar"}} onSubmit={(event) => event.preventDefault()}>
+        <input type="text" value={search} onChange={handleChange}/>
+      </form>
+      <div style={{gridArea: "results"}} >
         <Results search={search}/>
-      </header>
+      </div>
     </div>
   );
 }
