@@ -43,19 +43,7 @@ function Results({search}) {
   useEffect(() => searchDebounce(search), [search])
 
   const results = useMemo(() => {
-    return fuse ? fuse.search(debouncedSearch, {
-      fields: {
-        text: {
-          boost: 2,
-          expand: true,
-        },
-        title: {
-          boost: 1,
-          expand: true,
-        },
-        bool: 'AND',
-      }
-    }) : []
+    return fuse ? fuse.search(debouncedSearch) : []
   }, [debouncedSearch])
 
   return results.map((result) => {
