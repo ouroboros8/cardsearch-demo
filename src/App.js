@@ -66,7 +66,7 @@ function App() {
       gridTemplateColumns: "100%",
       gridTemplateAreas: "'searchbar' 'results'"
     }}>
-      <form style={{gridArea: "searchbar"}} onSubmit={(event) => event.preventDefault()}>
+      <form style={{gridArea: "searchbar", margin: "2rem"}} onSubmit={(event) => event.preventDefault()}>
         <input type="text" value={search} onChange={handleChange}/>
       </form>
       <div style={{gridArea: "results"}} >
